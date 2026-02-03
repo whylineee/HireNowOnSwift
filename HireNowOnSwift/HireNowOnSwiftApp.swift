@@ -11,7 +11,9 @@ import SwiftUI
 struct HireNowOnSwiftApp: App {
     var body: some Scene {
         WindowGroup {
-            RegistrationView()
+            NavigationStack {
+                RegistrationView()
+            }
         }
     }
 }

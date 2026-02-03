@@ -40,6 +40,7 @@ struct HomeScreenView: View {
             
             Spacer()
         }
+        .navigationBarBackButtonHidden(true)
         .background(Color.white)
     }
 }
