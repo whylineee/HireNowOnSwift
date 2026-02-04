@@ -70,7 +70,7 @@ struct RegistrationView: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToHome) {
-                HomeScreenView()
+                MainContainerView()
                     .navigationBarBackButtonHidden(true)
             }
         }
