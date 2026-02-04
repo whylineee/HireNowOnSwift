@@ -64,13 +64,11 @@ struct RegistrationView: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    .padding(.top, 80) // ⬅️ опускає білий блок нижче
-
+                    .padding(.top, 80) 
                     Spacer(minLength: 0)
                 }
             }
             .navigationBarHidden(true)
-            // ✅ ПЕРЕХІД НА ТВОЄ HOME
             .navigationDestination(isPresented: $navigateToHome) {
                 HomeScreenView()
                     .navigationBarBackButtonHidden(true)
