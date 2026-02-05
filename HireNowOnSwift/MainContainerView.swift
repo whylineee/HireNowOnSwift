@@ -13,7 +13,7 @@ enum AppTab: CaseIterable {
 }
 
 struct MainContainerView: View {
-    @StateObject private var appState = AppState()
+    @EnvironmentObject private var store: DataStore
     @State private var selected: AppTab = .home
 
     var body: some View {
@@ -21,14 +21,17 @@ struct MainContainerView: View {
             Group {
                 switch selected {
                 case .home:
-                    HomeScreenView()
+                    if store.activeAccount?.type == .employer {
+                        EmployerHomeView()
+                    } else {
+                        JobSeekerHomeView()
+                    }
                 case .favorites:
                     FavoritesView()
                 case .profile:
                     ProfileView()
                 }
             }
-            .environmentObject(appState)
 
             GlassTabBar(selected: $selected)
                 .padding(.horizontal, 18)
@@ -72,7 +75,6 @@ struct GlassTabBar: View {
             }
         } label: {
             ZStack {
-                // Animated indicator (pill)
                 if selected == tab {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(active.opacity(0.14))
@@ -96,11 +98,7 @@ struct GlassTabBar: View {
 // MARK: - UIKit blur wrapper
 struct BlurView: UIViewRepresentable {
     let style: UIBlurEffect.Style
-
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        UIVisualEffectView(effect: UIBlurEffect(style: style))
-    }
-
+    func makeUIView(context: Context) -> UIVisualEffectView { UIVisualEffectView(effect: UIBlurEffect(style: style)) }
     func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
 }
 

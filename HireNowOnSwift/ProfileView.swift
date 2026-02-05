@@ -1,10 +1,18 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var store: DataStore
+
     @State private var showSettings = false
+    @State private var showRegisterOther = false
+    @State private var registerType: AccountType = .employer
+    @State private var showResume = false
 
     private let accent = Color(red: 0.18, green: 0.18, blue: 0.70)
+
+    private var currentType: AccountType {
+        store.activeAccount?.type ?? .jobSeeker
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -31,7 +39,7 @@ struct ProfileView: View {
                 }
                 .padding(.top, 18)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 120) // щоб не перекрив таббар
+                .padding(.bottom, 120)
                 .frame(maxWidth: .infinity)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -43,11 +51,18 @@ struct ProfileView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showSettings) {
             SettingsView()
-                .environmentObject(appState)
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showRegisterOther) {
+            RegistrationView(lockedType: registerType)
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showResume) {
+            ResumeView()
+                .environmentObject(store)
         }
     }
 
-    // MARK: Header
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -62,9 +77,7 @@ struct ProfileView: View {
 
             Spacer()
 
-            Button {
-                showSettings = true
-            } label: {
+            Button { showSettings = true } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white)
@@ -78,28 +91,26 @@ struct ProfileView: View {
         .padding(.bottom, 14)
     }
 
-    // MARK: Account Card
     private var accountCard: some View {
         HStack(spacing: 14) {
-            Image(systemName: "person.crop.circle.fill")
+            Image(systemName: currentType == .jobSeeker ? "person.crop.circle.fill" : "briefcase.circle.fill")
                 .font(.system(size: 54))
                 .foregroundStyle(accent)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.activeAccount == .jobSeeker ? "Job Seeker" : "Employer")
+                Text(currentType == .jobSeeker ? "Job Seeker" : "Employer")
                     .font(.system(size: 16, weight: .semibold))
-
-                Text(appState.language == .uk ? "Мова: Українська" : "Language: English")
+                Text(store.activeAccount?.email ?? "—")
                     .font(.system(size: 12))
                     .foregroundStyle(.gray)
             }
 
             Spacer()
 
-            if appState.canSwitchAccounts {
+            if store.hasAccount(type: .jobSeeker) && store.hasAccount(type: .employer) {
                 Menu {
-                    Button("Job Seeker") { appState.switchAccount(to: .jobSeeker) }
-                    Button("Employer") { appState.switchAccount(to: .employer) }
+                    Button("Job Seeker") { store.switchTo(type: .jobSeeker) }
+                    Button("Employer") { store.switchTo(type: .employer) }
                 } label: {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 18, weight: .semibold))
@@ -120,10 +131,14 @@ struct ProfileView: View {
     private var quickActions: some View {
         HStack(spacing: 12) {
             actionCard(
-                title: appState.activeAccount == .jobSeeker ? "My CV" : "Company",
-                subtitle: appState.activeAccount == .jobSeeker ? "Edit & upload" : "Edit info",
-                icon: appState.activeAccount == .jobSeeker ? "doc.text" : "building.2"
-            ) {}
+                title: currentType == .jobSeeker ? "My CV" : "Company",
+                subtitle: currentType == .jobSeeker ? "Edit & upload" : "Edit info",
+                icon: currentType == .jobSeeker ? "doc.text" : "building.2"
+            ) {
+                if currentType == .jobSeeker {
+                    showResume = true
+                }
+            }
 
             actionCard(
                 title: "Settings",
@@ -177,26 +192,23 @@ struct ProfileView: View {
 
     private var accountOptions: some View {
         VStack(spacing: 10) {
-            // Create employer account button (only if missing)
-            if !appState.hasEmployerAccount {
-                optionRow(title: "Create Employer Account", icon: "briefcase.fill") {
-                    appState.createEmployerAccount()
-                    appState.switchAccount(to: .employer)
+            if currentType == .jobSeeker && !store.hasAccount(type: .employer) {
+                optionRow(title: "Register Employer account", icon: "briefcase.fill") {
+                    registerType = .employer
+                    showRegisterOther = true
                 }
             }
 
-            // Create job seeker account button (if missing)
-            if !appState.hasJobSeekerAccount {
-                optionRow(title: "Create Job Seeker Account", icon: "person.fill") {
-                    appState.createJobSeekerAccount()
-                    appState.switchAccount(to: .jobSeeker)
+            if currentType == .employer && !store.hasAccount(type: .jobSeeker) {
+                optionRow(title: "Register Job Seeker account", icon: "person.fill") {
+                    registerType = .jobSeeker
+                    showRegisterOther = true
                 }
             }
 
-            // Switch accounts row (only if both exist)
-            if appState.canSwitchAccounts {
+            if store.hasAccount(type: .jobSeeker) && store.hasAccount(type: .employer) {
                 optionRow(title: "Switch Account", icon: "arrow.left.arrow.right") {
-                    appState.switchAccount(to: appState.activeAccount == .jobSeeker ? .employer : .jobSeeker)
+                    store.switchTo(type: currentType == .jobSeeker ? .employer : .jobSeeker)
                 }
             }
         }
@@ -242,6 +254,3 @@ struct ProfileView: View {
     }
 }
 
-#Preview {
-    ProfileView()
-}

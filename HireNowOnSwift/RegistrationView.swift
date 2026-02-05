@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct RegistrationView: View {
+    @EnvironmentObject private var store: DataStore
+
+    // якщо відкриваємо реєстрацію другого типу
+    let lockedType: AccountType?
+    init(lockedType: AccountType? = nil) {
+        self.lockedType = lockedType
+    }
+
     // MARK: - Form state
     @State private var username = ""
     @State private var email = ""
@@ -10,8 +18,15 @@ struct RegistrationView: View {
     @State private var isPasswordVisible = false
     @State private var agreed = false
 
+    // тип акаунта
+    @State private var accountType: AccountType = .jobSeeker
+
     // MARK: - Navigation
     @State private var navigateToHome = false
+
+    // MARK: - Alerts
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     // MARK: - Validation
     private var isEmailValid: Bool {
@@ -37,7 +52,6 @@ struct RegistrationView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Background
                 LinearGradient(
                     colors: [
                         Color(red: 0.16, green: 0.20, blue: 0.78),
@@ -48,11 +62,11 @@ struct RegistrationView: View {
                 )
                 .ignoresSafeArea()
 
-                // White card (опущена нижче)
                 VStack {
                     VStack(alignment: .leading, spacing: 18) {
                         titleBlock
                         illustrationBlock
+                        accountTypeBlock
                         fieldsBlock
                         termsBlock
                         signUpButton
@@ -64,19 +78,27 @@ struct RegistrationView: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    .padding(.top, 80) 
+                    .padding(.top, 80)
                     Spacer(minLength: 0)
                 }
             }
             .navigationBarHidden(true)
+            .onAppear {
+                if let lockedType { accountType = lockedType }
+            }
+            .alert("Помилка", isPresented: $showAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(alertMessage)
+            }
             .navigationDestination(isPresented: $navigateToHome) {
                 MainContainerView()
+                    .environmentObject(store)
                     .navigationBarBackButtonHidden(true)
             }
         }
     }
 
-    // MARK: - UI blocks
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Welcome to us,")
@@ -126,14 +148,29 @@ struct RegistrationView: View {
         .padding(.bottom, 2)
     }
 
+    // ✅ Account type selector
+    private var accountTypeBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Account type")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.gray)
+
+            Picker("", selection: $accountType) {
+                Text("Job seeker").tag(AccountType.jobSeeker)
+                Text("Employer").tag(AccountType.employer)
+            }
+            .pickerStyle(.segmented)
+            .disabled(lockedType != nil) // якщо відкрили для створення конкретного типу
+        }
+        .padding(.top, 2)
+    }
+
     private var fieldsBlock: some View {
         VStack(spacing: 12) {
             AppTextField(placeholder: "Username", text: $username)
             AppTextField(placeholder: "Email", text: $email, keyboard: .emailAddress)
-
             AppTextField(placeholder: "Phone (optional)", text: $phone, keyboard: .phonePad)
 
-            // Password
             HStack {
                 Group {
                     if isPasswordVisible {
@@ -146,9 +183,7 @@ struct RegistrationView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
 
-                Button {
-                    isPasswordVisible.toggle()
-                } label: {
+                Button { isPasswordVisible.toggle() } label: {
                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
                         .foregroundStyle(.gray)
                         .font(.system(size: 16, weight: .medium))
@@ -162,7 +197,6 @@ struct RegistrationView: View {
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
 
-            // Confirm password
             HStack {
                 SecureField("", text: $confirmPassword)
                     .placeholder("Confirm password", when: confirmPassword.isEmpty)
@@ -182,7 +216,7 @@ struct RegistrationView: View {
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
         }
-        .padding(.top, 6)
+        .padding(.top, 2)
     }
 
     private var termsBlock: some View {
@@ -223,11 +257,25 @@ struct RegistrationView: View {
         .padding(.top, 2)
     }
 
-    // ✅ Кнопка темніша, поки форма не валідна
     private var signUpButton: some View {
         Button {
-            // ✅ якщо валідно — переходимо на Home
-            navigateToHome = true
+            guard formIsValid else { return }
+
+            let ok = store.register(
+                username: username,
+                email: email,
+                phone: phone,
+                password: password,
+                type: accountType
+            )
+
+
+            if ok {
+                navigateToHome = true
+            } else {
+                alertMessage = "Такий акаунт цього типу вже існує. Обери інший тип або інший email."
+                showAlert = true
+            }
         } label: {
             Text("Зареєструватись")
                 .font(.system(size: 17, weight: .semibold))
@@ -294,9 +342,5 @@ private extension View {
             self
         }
     }
-}
-
-#Preview {
-    RegistrationView()
 }
 
