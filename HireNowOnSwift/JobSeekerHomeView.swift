@@ -19,7 +19,7 @@ struct JobSeekerHomeView: View {
                     }
                 }
             }
-            .navigationTitle("JobS")
+            .navigationTitle("Jobs")
         }
     }
 }
